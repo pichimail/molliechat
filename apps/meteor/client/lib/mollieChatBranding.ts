@@ -1,7 +1,6 @@
 export const MOLLIECHAT_BRAND_NAME = 'MollieChat';
 
 const PRODUCT_NAME_PATTERN = /Rocket(?:\.|\s*)Chat/gi;
-const BRAND_ICON_PATH = '/images/logo/icon.svg';
 
 export const brandVisibleText = (value: string): string => value.replace(PRODUCT_NAME_PATTERN, MOLLIECHAT_BRAND_NAME);
 
@@ -29,15 +28,6 @@ const ensureBrowserBranding = (): void => {
 	ensureMeta('meta[name="application-name"]', 'name', 'application-name', MOLLIECHAT_BRAND_NAME);
 	ensureMeta('meta[name="apple-mobile-web-app-title"]', 'name', 'apple-mobile-web-app-title', MOLLIECHAT_BRAND_NAME);
 	ensureMeta('meta[property="og:site_name"]', 'property', 'og:site_name', MOLLIECHAT_BRAND_NAME);
-
-	const brandedIcon = new URL(BRAND_ICON_PATH, window.location.origin).toString();
-	for (const link of document.head.querySelectorAll<HTMLLinkElement>(
-		'link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"]',
-	)) {
-		if (link.href !== brandedIcon) {
-			link.href = brandedIcon;
-		}
-	}
 };
 
 const installMollieChatBrowserBranding = (): void => {
@@ -49,7 +39,7 @@ const installMollieChatBrowserBranding = (): void => {
 		const observer = new MutationObserver(() => ensureBrowserBranding());
 		observer.observe(document.head, {
 			attributes: true,
-			attributeFilter: ['content', 'href'],
+			attributeFilter: ['content'],
 			characterData: true,
 			childList: true,
 			subtree: true,
