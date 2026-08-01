@@ -4,7 +4,7 @@ export const MOLLIECHAT_BRAND_NAME = 'MollieChat';
 export const MOLLIECHAT_PROJECT_URL = 'https://github.com/pichimail/molliechat';
 
 const PRODUCT_NAME_PATTERN = /Rocket(?:\.|\s*)Chat/gi;
-const VENDOR_HOST_PATTERN = /(^|\.)rocket\.chat$/i;
+const UI_VENDOR_HOSTS = new Set(['rocket.chat', 'www.rocket.chat', 'docs.rocket.chat', 'go.rocket.chat', 'support.rocket.chat']);
 const VENDOR_GITHUB_PATH_PATTERN = /^\/RocketChat(?:\/|$)/i;
 
 const USER_CONTENT_SELECTOR = [
@@ -15,6 +15,10 @@ const USER_CONTENT_SELECTOR = [
 	'pre',
 	'kbd',
 	'samp',
+	'script',
+	'style',
+	'template',
+	'noscript',
 	'[data-qa="message"]',
 	'[data-qa^="message-"]',
 	'[data-qa*="message-body"]',
@@ -40,8 +44,9 @@ const isUserAuthoredContent = (node: Node): boolean => {
 const getBrandAssetUrl = (asset: 'logo.svg' | 'logo_dark.svg' | 'icon.svg'): string =>
 	new URL(`/images/logo/${asset}`, window.location.origin).toString();
 
-const isVendorUrl = (url: URL): boolean =>
-	VENDOR_HOST_PATTERN.test(url.hostname) || (url.hostname.toLowerCase() === 'github.com' && VENDOR_GITHUB_PATH_PATTERN.test(url.pathname));
+const isUiVendorUrl = (url: URL): boolean =>
+	UI_VENDOR_HOSTS.has(url.hostname.toLowerCase()) ||
+	(url.hostname.toLowerCase() === 'github.com' && VENDOR_GITHUB_PATH_PATTERN.test(url.pathname));
 
 const brandTextNode = (node: Text): void => {
 	if (isUserAuthoredContent(node) || !node.nodeValue || !PRODUCT_NAME_PATTERN.test(node.nodeValue)) {
@@ -86,13 +91,19 @@ const brandAnchor = (anchor: HTMLAnchorElement): void => {
 
 	try {
 		const url = new URL(href, window.location.href);
-		if (!isVendorUrl(url)) {
+		if (!isUiVendorUrl(url)) {
 			return;
 		}
 
-		anchor.href = MOLLIECHAT_PROJECT_URL;
-		anchor.rel = anchor.rel || 'noopener noreferrer';
-		anchor.title = MOLLIECHAT_BRAND_NAME;
+		if (anchor.href !== MOLLIECHAT_PROJECT_URL) {
+			anchor.href = MOLLIECHAT_PROJECT_URL;
+		}
+		if (!anchor.rel) {
+			anchor.rel = 'noopener noreferrer';
+		}
+		if (anchor.title !== MOLLIECHAT_BRAND_NAME) {
+			anchor.title = MOLLIECHAT_BRAND_NAME;
+		}
 	} catch {
 		// Invalid or application-specific URLs must remain untouched.
 	}
@@ -110,7 +121,7 @@ const brandImage = (image: HTMLImageElement): void => {
 
 	let isVendorHosted = false;
 	try {
-		isVendorHosted = isVendorUrl(new URL(source, window.location.href));
+		isVendorHosted = isUiVendorUrl(new URL(source, window.location.href));
 	} catch {
 		isVendorHosted = false;
 	}
@@ -121,8 +132,14 @@ const brandImage = (image: HTMLImageElement): void => {
 
 	const isWordmark = /\/logo(?:_dark)?\.svg/i.test(source);
 	const isDarkWordmark = /\/logo_dark\.svg/i.test(source);
-	image.src = getBrandAssetUrl(isWordmark ? (isDarkWordmark ? 'logo_dark.svg' : 'logo.svg') : 'icon.svg');
-	image.alt = MOLLIECHAT_BRAND_NAME;
+	const brandedSource = getBrandAssetUrl(isWordmark ? (isDarkWordmark ? 'logo_dark.svg' : 'logo.svg') : 'icon.svg');
+
+	if (image.src !== brandedSource) {
+		image.src = brandedSource;
+	}
+	if (image.alt !== MOLLIECHAT_BRAND_NAME) {
+		image.alt = MOLLIECHAT_BRAND_NAME;
+	}
 };
 
 const brandElement = (element: Element): void => {
@@ -171,19 +188,30 @@ const ensureMeta = (selector: string, attribute: 'name' | 'property', key: strin
 		meta.setAttribute(attribute, key);
 		document.head.appendChild(meta);
 	}
-	meta.content = content;
+	if (meta.content !== content) {
+		meta.content = content;
+	}
 };
 
 const ensureBrowserBranding = (): void => {
-	document.documentElement.dataset.productName = MOLLIECHAT_BRAND_NAME;
-	document.title = brandVisibleText(document.title || MOLLIECHAT_BRAND_NAME);
+	if (document.documentElement.dataset.productName !== MOLLIECHAT_BRAND_NAME) {
+		document.documentElement.dataset.productName = MOLLIECHAT_BRAND_NAME;
+	}
+
+	const brandedTitle = brandVisibleText(document.title || MOLLIECHAT_BRAND_NAME);
+	if (document.title !== brandedTitle) {
+		document.title = brandedTitle;
+	}
 
 	ensureMeta('meta[name="application-name"]', 'name', 'application-name', MOLLIECHAT_BRAND_NAME);
 	ensureMeta('meta[name="apple-mobile-web-app-title"]', 'name', 'apple-mobile-web-app-title', MOLLIECHAT_BRAND_NAME);
 	ensureMeta('meta[property="og:site_name"]', 'property', 'og:site_name', MOLLIECHAT_BRAND_NAME);
 
+	const brandedIcon = getBrandAssetUrl('icon.svg');
 	for (const link of document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"]')) {
-		link.href = getBrandAssetUrl('icon.svg');
+		if (link.href !== brandedIcon) {
+			link.href = brandedIcon;
+		}
 	}
 };
 
