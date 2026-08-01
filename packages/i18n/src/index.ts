@@ -5,6 +5,10 @@ import type { RocketchatI18nKeys } from './resources.ts';
 
 export type { RocketchatI18nKeys };
 
+const PRODUCT_NAME_PATTERN = /Rocket(?:\.|\s*)Chat/gi;
+
+const brandVisibleTranslation = (value: string): string => value.replace(PRODUCT_NAME_PATTERN, 'MollieChat');
+
 declare module 'i18next' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface TFunction {
@@ -16,17 +20,19 @@ declare module 'i18next' {
 export const addSprinfToI18n = (t: TFunction) => {
 	return (key: string, ...replaces: any): string => {
 		if (replaces[0] === undefined) {
-			return t(key);
+			return brandVisibleTranslation(t(key));
 		}
 
 		if (isObject(replaces[0]) && !Array.isArray(replaces[0])) {
-			return t(key, replaces[0]);
+			return brandVisibleTranslation(t(key, replaces[0]));
 		}
 
-		return t(key, {
-			postProcess: 'sprintf',
-			sprintf: replaces,
-		});
+		return brandVisibleTranslation(
+			t(key, {
+				postProcess: 'sprintf',
+				sprintf: replaces,
+			}),
+		);
 	};
 };
 
@@ -92,7 +98,7 @@ export const extractTranslationNamespaces = (source: Record<string, string>): Re
 		const prefix = availableTranslationNamespaces.find((namespace) => key.startsWith(`${namespace}.`));
 		const keyWithoutNamespace = prefix ? key.slice(prefix.length + 1) : key;
 		const ns = prefix ?? defaultTranslationNamespace;
-		result[ns][keyWithoutNamespace] = value;
+		result[ns][keyWithoutNamespace] = brandVisibleTranslation(value);
 	}
 
 	return result;
@@ -145,7 +151,7 @@ export const applyCustomTranslations = (
 				continue;
 			}
 
-			i18n.addResourceBundle(lng, ns, { [keyWithoutNamespace]: value }, true, true);
+			i18n.addResourceBundle(lng, ns, { [keyWithoutNamespace]: brandVisibleTranslation(value) }, true, true);
 		}
 	}
 };
