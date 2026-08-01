@@ -1,4 +1,5 @@
 import './meteor/overrides';
+import './lib/mollieChatBranding';
 import './meteor/startup';
 import './lib/sdk/ddpSdk';
 import './serviceWorker';
