@@ -1,29 +1,9 @@
-import { i18n } from '../../app/utils/lib/i18n';
-
 export const MOLLIECHAT_BRAND_NAME = 'MollieChat';
 
 const PRODUCT_NAME_PATTERN = /Rocket(?:\.|\s*)Chat/gi;
 const BRAND_ICON_PATH = '/images/logo/icon.svg';
-let translationBrandingInstalled = false;
 
 export const brandVisibleText = (value: string): string => value.replace(PRODUCT_NAME_PATTERN, MOLLIECHAT_BRAND_NAME);
-
-const installTranslationBranding = (): void => {
-	if (translationBrandingInstalled) {
-		return;
-	}
-
-	translationBrandingInstalled = true;
-	const originalTranslate = i18n.t.bind(i18n);
-
-	// Normalize only text returned by the translation engine. This does not
-	// inspect or mutate room messages, user input, route values, URLs, API data,
-	// database values, settings identifiers, or any other application payload.
-	i18n.t = ((...args: Parameters<typeof i18n.t>) => {
-		const translated = originalTranslate(...args);
-		return typeof translated === 'string' ? brandVisibleText(translated) : translated;
-	}) as typeof i18n.t;
-};
 
 const ensureMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string): void => {
 	let meta = document.head.querySelector<HTMLMetaElement>(selector);
@@ -86,5 +66,4 @@ const installMollieChatBrowserBranding = (): void => {
 	start();
 };
 
-installTranslationBranding();
 installMollieChatBrowserBranding();
