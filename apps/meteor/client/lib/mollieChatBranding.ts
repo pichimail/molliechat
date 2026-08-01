@@ -1,185 +1,9 @@
-import { i18n } from '../../app/utils/lib/i18n';
-
 export const MOLLIECHAT_BRAND_NAME = 'MollieChat';
-export const MOLLIECHAT_PROJECT_URL = 'https://github.com/pichimail/molliechat';
 
 const PRODUCT_NAME_PATTERN = /Rocket(?:\.|\s*)Chat/gi;
-const UI_VENDOR_HOSTS = new Set(['rocket.chat', 'www.rocket.chat', 'docs.rocket.chat', 'go.rocket.chat', 'support.rocket.chat']);
-const VENDOR_GITHUB_PATH_PATTERN = /^\/RocketChat(?:\/|$)/i;
-
-const USER_CONTENT_SELECTOR = [
-	'[contenteditable="true"]',
-	'textarea',
-	'input',
-	'code',
-	'pre',
-	'kbd',
-	'samp',
-	'script',
-	'style',
-	'template',
-	'noscript',
-	'[data-qa="message"]',
-	'[data-qa^="message-"]',
-	'[data-qa*="message-body"]',
-	'[data-qa*="composer"]',
-	'[data-testid*="message"]',
-	'[data-testid*="composer"]',
-	'.rcx-message',
-	'.rcx-message-body',
-	'.message-body',
-	'.js-message-text',
-].join(',');
-
-const TEXT_ATTRIBUTES = ['title', 'aria-label', 'alt', 'placeholder'] as const;
-const STOCK_BRAND_ASSET_PATTERN = /(?:^|\/)images\/logo\/(?:logo(?:_dark)?|icon|favicon[^/]*|android-chrome[^/]*|apple-touch-icon[^/]*|mstile[^/]*|safari-pinned-tab)\.(?:svg|png|ico)(?:\?.*)?$/i;
+const BRAND_ICON_PATH = '/images/logo/icon.svg';
 
 export const brandVisibleText = (value: string): string => value.replace(PRODUCT_NAME_PATTERN, MOLLIECHAT_BRAND_NAME);
-
-const isUserAuthoredContent = (node: Node): boolean => {
-	const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
-	return Boolean(element?.closest(USER_CONTENT_SELECTOR));
-};
-
-const getBrandAssetUrl = (asset: 'logo.svg' | 'logo_dark.svg' | 'icon.svg'): string =>
-	new URL(`/images/logo/${asset}`, window.location.origin).toString();
-
-const isUiVendorUrl = (url: URL): boolean =>
-	UI_VENDOR_HOSTS.has(url.hostname.toLowerCase()) ||
-	(url.hostname.toLowerCase() === 'github.com' && VENDOR_GITHUB_PATH_PATTERN.test(url.pathname));
-
-const brandTextNode = (node: Text): void => {
-	if (isUserAuthoredContent(node) || !node.nodeValue || !PRODUCT_NAME_PATTERN.test(node.nodeValue)) {
-		PRODUCT_NAME_PATTERN.lastIndex = 0;
-		return;
-	}
-
-	PRODUCT_NAME_PATTERN.lastIndex = 0;
-	const brandedValue = brandVisibleText(node.nodeValue);
-	if (brandedValue !== node.nodeValue) {
-		node.nodeValue = brandedValue;
-	}
-};
-
-const brandAttributes = (element: Element): void => {
-	if (isUserAuthoredContent(element)) {
-		return;
-	}
-
-	for (const attribute of TEXT_ATTRIBUTES) {
-		const value = element.getAttribute(attribute);
-		if (!value) {
-			continue;
-		}
-
-		const brandedValue = brandVisibleText(value);
-		if (brandedValue !== value) {
-			element.setAttribute(attribute, brandedValue);
-		}
-	}
-};
-
-const brandAnchor = (anchor: HTMLAnchorElement): void => {
-	if (isUserAuthoredContent(anchor)) {
-		return;
-	}
-
-	const href = anchor.getAttribute('href');
-	if (!href) {
-		return;
-	}
-
-	try {
-		const url = new URL(href, window.location.href);
-		if (!isUiVendorUrl(url)) {
-			return;
-		}
-
-		if (anchor.href !== MOLLIECHAT_PROJECT_URL) {
-			anchor.href = MOLLIECHAT_PROJECT_URL;
-		}
-		if (!anchor.rel) {
-			anchor.rel = 'noopener noreferrer';
-		}
-		if (anchor.title !== MOLLIECHAT_BRAND_NAME) {
-			anchor.title = MOLLIECHAT_BRAND_NAME;
-		}
-	} catch {
-		// Invalid or application-specific URLs must remain untouched.
-	}
-};
-
-const brandImage = (image: HTMLImageElement): void => {
-	if (isUserAuthoredContent(image)) {
-		return;
-	}
-
-	const source = image.getAttribute('src');
-	if (!source) {
-		return;
-	}
-
-	let isVendorHosted = false;
-	try {
-		isVendorHosted = isUiVendorUrl(new URL(source, window.location.href));
-	} catch {
-		isVendorHosted = false;
-	}
-
-	if (!isVendorHosted && !STOCK_BRAND_ASSET_PATTERN.test(source)) {
-		return;
-	}
-
-	const isWordmark = /\/logo(?:_dark)?\.svg/i.test(source);
-	const isDarkWordmark = /\/logo_dark\.svg/i.test(source);
-	const brandedSource = getBrandAssetUrl(isWordmark ? (isDarkWordmark ? 'logo_dark.svg' : 'logo.svg') : 'icon.svg');
-
-	if (image.src !== brandedSource) {
-		image.src = brandedSource;
-	}
-	if (image.alt !== MOLLIECHAT_BRAND_NAME) {
-		image.alt = MOLLIECHAT_BRAND_NAME;
-	}
-};
-
-const brandElement = (element: Element): void => {
-	brandAttributes(element);
-
-	if (element instanceof HTMLAnchorElement) {
-		brandAnchor(element);
-	}
-
-	if (element instanceof HTMLImageElement) {
-		brandImage(element);
-	}
-};
-
-const brandSubtree = (root: Node): void => {
-	if (root.nodeType === Node.TEXT_NODE) {
-		brandTextNode(root as Text);
-		return;
-	}
-
-	if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
-		return;
-	}
-
-	if (root.nodeType === Node.ELEMENT_NODE) {
-		brandElement(root as Element);
-	}
-
-	const elementRoot = root as ParentNode;
-	for (const element of elementRoot.querySelectorAll('*')) {
-		brandElement(element);
-	}
-
-	const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-	let currentNode = walker.nextNode();
-	while (currentNode) {
-		brandTextNode(currentNode as Text);
-		currentNode = walker.nextNode();
-	}
-};
 
 const ensureMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string): void => {
 	let meta = document.head.querySelector<HTMLMetaElement>(selector);
@@ -188,15 +12,14 @@ const ensureMeta = (selector: string, attribute: 'name' | 'property', key: strin
 		meta.setAttribute(attribute, key);
 		document.head.appendChild(meta);
 	}
+
 	if (meta.content !== content) {
 		meta.content = content;
 	}
 };
 
 const ensureBrowserBranding = (): void => {
-	if (document.documentElement.dataset.productName !== MOLLIECHAT_BRAND_NAME) {
-		document.documentElement.dataset.productName = MOLLIECHAT_BRAND_NAME;
-	}
+	document.documentElement.dataset.productName = MOLLIECHAT_BRAND_NAME;
 
 	const brandedTitle = brandVisibleText(document.title || MOLLIECHAT_BRAND_NAME);
 	if (document.title !== brandedTitle) {
@@ -207,65 +30,32 @@ const ensureBrowserBranding = (): void => {
 	ensureMeta('meta[name="apple-mobile-web-app-title"]', 'name', 'apple-mobile-web-app-title', MOLLIECHAT_BRAND_NAME);
 	ensureMeta('meta[property="og:site_name"]', 'property', 'og:site_name', MOLLIECHAT_BRAND_NAME);
 
-	const brandedIcon = getBrandAssetUrl('icon.svg');
-	for (const link of document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"]')) {
+	const brandedIcon = new URL(BRAND_ICON_PATH, window.location.origin).toString();
+	for (const link of document.head.querySelectorAll<HTMLLinkElement>(
+		'link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"]',
+	)) {
 		if (link.href !== brandedIcon) {
 			link.href = brandedIcon;
 		}
 	}
 };
 
-const installTranslationBranding = (): void => {
-	const originalTranslate = i18n.t.bind(i18n);
-	i18n.t = ((...args: Parameters<typeof i18n.t>) => {
-		const translated = originalTranslate(...args);
-		return typeof translated === 'string' ? brandVisibleText(translated) : translated;
-	}) as typeof i18n.t;
-};
-
 const installMollieChatBrowserBranding = (): void => {
 	const start = (): void => {
 		ensureBrowserBranding();
-		brandSubtree(document.documentElement);
 
-		const pendingNodes = new Set<Node>();
-		let flushScheduled = false;
-
-		const flush = (): void => {
-			flushScheduled = false;
-			for (const node of pendingNodes) {
-				brandSubtree(node);
-			}
-			pendingNodes.clear();
-			ensureBrowserBranding();
-		};
-
-		const schedule = (node: Node): void => {
-			pendingNodes.add(node);
-			if (!flushScheduled) {
-				flushScheduled = true;
-				queueMicrotask(flush);
-			}
-		};
-
-		new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				if (mutation.type === 'childList') {
-					for (const node of mutation.addedNodes) {
-						schedule(node);
-					}
-					continue;
-				}
-
-				schedule(mutation.target);
-			}
-		}).observe(document.documentElement, {
+		// Observe only browser metadata. Never mutate application content, links,
+		// user data, room data, routes, or interactive elements.
+		const observer = new MutationObserver(() => ensureBrowserBranding());
+		observer.observe(document.head, {
 			attributes: true,
-			attributeFilter: [...TEXT_ATTRIBUTES, 'href', 'src'],
+			attributeFilter: ['content', 'href'],
 			characterData: true,
 			childList: true,
 			subtree: true,
 		});
+
+		window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
 	};
 
 	if (document.readyState === 'loading') {
@@ -276,5 +66,4 @@ const installMollieChatBrowserBranding = (): void => {
 	start();
 };
 
-installTranslationBranding();
 installMollieChatBrowserBranding();
